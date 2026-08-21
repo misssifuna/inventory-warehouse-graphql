@@ -1,15 +1,15 @@
-import { products } from "../data/inventory";
+import {
+  fetchWarehouseInventory,
+  fetchWarehouseProduct,
+} from "../services/warehouseApi";
 
-interface ProductArgs {
-  sku: string;
-}
-
-export const resolvers = {
+const resolvers = {
   Query: {
-    products: () => products,
+    products: () => fetchWarehouseInventory(),
 
-    product: (_: unknown, args: ProductArgs) => {
-      return products.find((product) => product.sku === args.sku);
-    },
+    product: (_: unknown, args: { sku: string }) =>
+      fetchWarehouseProduct(args.sku),
   },
 };
+
+export { resolvers };
