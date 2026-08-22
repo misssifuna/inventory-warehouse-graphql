@@ -3,8 +3,7 @@ import { startStandaloneServer } from "@apollo/server/standalone";
 
 import { typeDefs } from "./src/schema/typeDefs";
 import { resolvers } from "./src/resolvers/inventory";
-import { fetchWarehouseInventory } from "./src/services/warehouseApi";
-import { updateInventoryCache } from "./src/services/inventoryCache";
+import { startInventoryPolling } from "./src/services/inventoryPoller";
 
 const server = new ApolloServer({
   typeDefs,
@@ -12,8 +11,7 @@ const server = new ApolloServer({
 });
 
 async function startServer() {
-  const inventory = await fetchWarehouseInventory();
-  updateInventoryCache(inventory);
+  await startInventoryPolling();
 
   const { url } = await startStandaloneServer(server, {
     listen: { port: 4000 },
@@ -26,3 +24,4 @@ startServer().catch((error) => {
   console.error("Failed to start GraphQL server:", error);
   process.exit(1);
 });
+
