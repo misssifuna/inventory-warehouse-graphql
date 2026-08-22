@@ -1,14 +1,14 @@
 import {
-  fetchWarehouseInventory,
-  fetchWarehouseProduct,
-} from "../services/warehouseApi";
+  getCachedInventory,
+  getCachedProduct,
+} from "../services/inventoryCache";
 
 const resolvers = {
   Query: {
-    products: () => fetchWarehouseInventory(),
+    products: () => getCachedInventory(),
 
     product: (_: unknown, args: { sku: string }) =>
-      fetchWarehouseProduct(args.sku),
+      getCachedProduct(args.sku),
   },
 };
 
