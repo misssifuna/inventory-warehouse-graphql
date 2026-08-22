@@ -2,11 +2,12 @@ import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 
 import { typeDefs } from "./src/schema/typeDefs";
-import { resolvers } from "./src/resolvers/inventory";
+import { resolvers } from "./src/resolvers/checkIn";
 import {
   startInventoryPolling,
   stopInventoryPolling,
 } from "./src/services/inventoryPoller";
+import { startWebhookServer } from "./src/services/webhookServer";
 
 const server = new ApolloServer({
   typeDefs,
@@ -21,6 +22,7 @@ async function startServer() {
   });
 
   console.log(`GraphQL server ready at ${url}`);
+  startWebhookServer();
 }
 
 startServer().catch((error) => {

@@ -1,20 +1,30 @@
 const typeDefs = `#graphql
-  type Product {
-    sku: ID!
-    name: String!
-    quantity: Int!
-    inStock: Boolean!
+  enum AttendeeStatus {
+    NOT_CHECKED_IN
+    PENDING
+    CHECKED_IN
   }
 
-  type InventoryStatus {
-    lastUpdatedAt: String
-    productCount: Int!
+  type Attendee {
+    id: ID!
+    name: String!
+    email: String!
+    status: AttendeeStatus!
+  }
+
+  type CheckInResult {
+    success: Boolean!
+    message: String!
+    attendee: Attendee!
   }
 
   type Query {
-    products: [Product!]!
-    product(sku: ID!): Product
-    inventoryStatus: InventoryStatus!
+    attendee(id: ID!): Attendee
+    attendees: [Attendee!]!
+  }
+
+  type Mutation {
+    checkIn(attendeeId: ID!): CheckInResult!
   }
 `;
 
