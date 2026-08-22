@@ -1,276 +1,512 @@
-# Blocker Journal — GraphQL Solo Recon
+# Blocker Journal
 
-**Project:** Northstar Retail Co. — Inventory Sync Service  
-**Sprint:** The Meridian Pivot  
-**Assignment:** Assignment 1 — Solo Recon  
-**Tool:** GraphQL  
-**Learner:** Ebenezer Sifuna  
-**Date:** 21 August 2026
+## Project
 
----
+**Inventory Warehouse GraphQL — Meridian Pivot Simulation**
 
-## Purpose
+This journal records the technical blockers encountered during the development sprint, the decisions made in response to those blockers, and how the project architecture evolved as a result.
 
-This journal records the actual learning process during the Day 1–2 solo reconnaissance phase.
-
-The purpose is not to present a clean development history. It records errors, dead ends, troubleshooting decisions, and what was learned from them.
-
-The sprint requires the unfamiliar tool to be genuinely new and requires the learner to work independently during the solo phase.
+The objective is not only to record what went wrong, but also to document why particular engineering decisions were made.
 
 ---
 
-# Blocker 1 — Windows blocked Python installation
+# 1. Initial Environment Blocker — Windows Smart App Control
 
-### Time
+## Problem
 
-20 August 2026
+The development environment initially encountered Windows security restrictions that interfered with the local development toolchain.
 
-### Task
+Windows **Smart App Control** was enabled on the machine.
 
-Install Python for the development environment.
+The restriction became significant because development tools and their supporting executables needed to run locally in order to compile and execute the project.
 
-### Initial symptom
+The problem was not simply a missing package or incorrect command. The operating-system security layer was interfering with the execution of development tooling.
 
-The Python installation failed with:
+## Investigation
+
+Before changing the security configuration, the available Windows Security settings were checked.
+
+The environment showed:
+
+* Smart App Control: **On**
+* Tamper Protection: **Off**
+* Automatic Sample Submission: **Off**
+* Cloud-delivered Protection: **Off**
+* Potentially unwanted app blocking: **Off**
+* A Windows Defender quick scan was pending
+
+The combination indicated that the machine was operating with several security controls disabled or modified while Smart App Control remained enabled.
+
+## Decision
+
+Smart App Control was eventually disabled because it had become a direct blocker to the local development workflow.
+
+This was a deliberate development-environment decision rather than the first troubleshooting step.
+
+The reason for the change was practical:
+
+> The assignment required local compilation and execution of development tooling, and Smart App Control was preventing the required toolchain from operating reliably.
+
+The change allowed development to continue.
+
+---
+
+# 2. esbuild / Native Tooling Blocker
+
+## Problem
+
+After addressing the operating-system restriction, the project encountered another blocker involving the JavaScript/TypeScript build toolchain and `esbuild`.
+
+The issue was related to native tooling required by the development environment.
+
+This created a situation where the intended TypeScript workflow could not be relied upon consistently enough to continue the sprint at the required pace.
+
+The blocker was particularly important because the project had a time-bound simulation and the objective was to produce a working implementation rather than spend the entire sprint troubleshooting the local build environment.
+
+## Decision
+
+Rather than allowing the environment blocker to stop development completely, we evaluated a fallback.
+
+The immediate priority became:
+
+1. Keep the application running.
+2. Continue implementing the warehouse service.
+3. Preserve the architecture as much as possible.
+4. Return to TypeScript when the environment permitted it.
+
+---
+
+# 3. Temporary JavaScript Fallback
+
+## Decision
+
+The project was temporarily moved from TypeScript to JavaScript.
+
+This was a tactical workaround rather than a change in the intended architecture.
+
+The purpose was to remove the TypeScript/build-tooling dependency from the critical development path while continuing to implement the required functionality.
+
+The initial warehouse GraphQL service was therefore implemented and tested using JavaScript.
+
+The application successfully exposed the GraphQL API and supported the initial inventory queries.
+
+The project was then organized into separate areas for:
 
 ```text
-PythonBA.dll is either not designed to run on Windows or it contains an error.
+src/
+├── data/
+├── resolvers/
+└── schema/
+```
 
-Error status 0xc0e90002
+This separation was deliberately preserved even during the JavaScript fallback.
 
-Installer failed with exit code: 2147946951
+---
 
-### Investigation
+# 4. Warehouse Service Architecture
 
-The Windows Installer log initially showed:
+Once the immediate blocker was bypassed, development continued around the warehouse inventory use case.
 
-Error 0x800711c7: Failed to load UX DLL.
-Error 0x800711c7: Failed to load UX.
-Error 0x800711c7: Failed while running
-Error 0x800711c7: Failed to run per-user mode.
+The architecture evolved to include:
 
-The TEMP directory permissions were then checked.
-Windows Code Integrity logs showed Smart App Control blocking temporary installer DLLs.
+```text
+GraphQL API
+    ↓
+Resolvers
+    ↓
+Warehouse service
+    ↓
+Inventory cache
+    ↓
+Inventory polling
+```
 
-### Further investigation
+This provided a foundation for working with changing external data rather than treating the original hard-coded inventory array as the final architecture.
 
-Windows Code Integrity logs showed Smart App Control blocking temporary installer DLLs.
+The work was committed incrementally to Git.
 
-Relevant events included:
-Smart App Control Block Details
-Code Integrity determined that a process attempted to load
-PythonBA.dll that did not meet the Enterprise signing level requirements
-or violated code integrity policy.
+Important commits included:
 
-### Resolution
+```text
+829d969 feat: add inventory cache
+9fbe157 feat: add inventory polling
+5492dd3 feat: expose inventory cache status
+```
 
-Instead of disabling Windows security permanently or bypassing the installer, the Python installation was changed to use the Python installation manager.
+The repository therefore retained a visible progression of the work.
 
-Python was successfully installed.
+---
 
-pip is available through:
+# 5. Returning to TypeScript
 
-python -m pip --version
+## Reason for returning
 
-# Blocker 2 — Node.js MSI installation failed
+Once the environment was sufficiently stable, we reconsidered the temporary JavaScript fallback.
 
-### Time
+JavaScript had served its purpose as a workaround, but it was not the preferred final architecture.
 
-21 August 2026
+The project had originally been intended to use TypeScript, and continuing with JavaScript would have meant allowing a temporary blocker workaround to permanently determine the project's architecture.
 
-### Task
+We therefore restored TypeScript.
 
-Install Node.js for the GraphQL prototype.
+The migration included:
 
-### Initial symptom
+* Installing TypeScript.
+* Installing Node.js type definitions.
+* Creating `tsconfig.json`.
+* Converting the application entry point to `server.ts`.
+* Converting the inventory data to TypeScript.
+* Converting the GraphQL schema to TypeScript.
+* Converting the resolver to TypeScript.
+* Removing obsolete JavaScript source files.
 
-The Node.js LTS installation through winget failed:
+The compiler was then run successfully with:
 
-Installer failed with exit code: 1603
+```powershell
+npx.cmd tsc
+```
 
-The Windows Installer log showed:
+The resulting compiled application successfully executed.
 
-Error 1723. There is a problem with this Windows Installer package.
-A DLL required for this install to complete could not be run.
+This was recorded in Git as:
 
-The failing action was:
-SetInstallScope
+```text
+6543af1 refactor: restore TypeScript architecture
+```
 
-### Investigation
+The important lesson from this stage was that the temporary JavaScript solution was treated as a **reversible tactical decision**, not an architectural commitment.
 
-The Windows Code Integrity log showed:
-Smart App Control Block Details
-Code Integrity determined that a process
-(msiexec.exe) attempted to load
-C:\Windows\Installer\MSIBF81.tmp
-that did not meet the Enterprise signing level requirements
-or violated code integrity policy.
+---
 
-### Decision
+# 6. Meridian Pivot
 
-The Node.js MSI installer was not bypassed.
+## Client Change
 
-Instead, the official Node.js Windows binary ZIP distribution was used.
+The original simulation involved a warehouse/inventory GraphQL service.
 
-### Resolution
-The Node.js ZIP package was downloaded:
-Node.js was therefore successfully installed without disabling Smart App Control.
+The client then introduced the Meridian Pivot:
 
-### Learning
+**Solstice Events Co.** required an event check-in kiosk service.
 
-The MSI installer and the Node.js runtime are separate concerns.
+The original workflow was synchronous:
 
-Windows was blocking the installer custom action, not the Node.js executable itself.
+```text
+QR scan
+  ↓
+Call badge printer
+  ↓
+Wait for response
+  ↓
+Print succeeds
+  ↓
+Show CHECKED_IN
+```
 
-Using the official binary distribution allowed the development environment to be established while keeping Smart App Control enabled.
+The printer vendor was deprecating the synchronous API.
 
-### Time
+The new requirement was asynchronous:
 
-21 August 2026
+```text
+QR scan
+  ↓
+Accept check-in request
+  ↓
+PENDING
+  ↓
+Publish print request
+  ↓
+Vendor processes print job
+  ↓
+Webhook callback
+  ↓
+Confirm print
+  ↓
+CHECKED_IN
+```
 
-### Task
+The application therefore needed to be redesigned around asynchronous state transitions.
 
-Verify npm after installing Node.js.
+---
 
-### Initial symptom
-PowerShell was attempting to execute npm.ps1, which was blocked by the current PowerShell execution policy.
+# 7. Preserving the Existing Architecture
 
-### Resolution
+Rather than creating an unrelated application or throwing away the warehouse work, the existing project structure was retained.
 
-The PowerShell execution policy was not changed.
+The resolver was renamed:
 
-Instead, the Windows command version was executed explicitly:
+```text
+src/resolvers/inventory.ts
+        ↓
+src/resolvers/checkIn.ts
+```
 
-### Learning
+The rename reflected the resolver's new responsibility while maintaining the existing separation between:
 
-A command can exist on the system while still being blocked by a shell-specific execution policy.
+* schema
+* data
+* resolvers
+* services
 
-Using npm.cmd allows npm to be used without weakening the PowerShell execution policy.
+This was recorded as:
 
-# Blocker 4 — TypeScript / tsx installation failed
-### Time
+```text
+c3a3544 refactor: rename inventory resolver to check-in resolver
+```
 
-21 August 2026
+The decision demonstrated that the previous work could serve as a foundation for the pivot rather than becoming disposable code.
 
-### Task
+---
 
-Install TypeScript development tooling:
+# 8. Asynchronous Badge Printing Implementation
 
-typescript
-tsx
-@types/node
-Initial command
-npm.cmd install -D typescript tsx @types/node
-Error
+The pivot introduced several services:
 
-The installation failed while installing esbuild.
+```text
+src/
+├── data/
+│   └── attendees.ts
+│
+├── resolvers/
+│   └── checkIn.ts
+│
+├── schema/
+│   └── typeDefs.ts
+│
+└── services/
+    ├── checkInService.ts
+    ├── printQueue.ts
+    ├── webhookServer.ts
+    └── webhookService.ts
+```
 
-### Relevant error:
+The GraphQL `checkIn` mutation no longer treats the initial request as proof of successful printing.
 
-The failing command involved:
+Instead, it returns:
 
-node install.js
+```text
+PENDING
+```
 
-and the esbuild binary:
+The print queue represents the asynchronous handoff to the badge printer.
 
-@esbuild\win32-x64\esbuild.exe
-Investigation
+The webhook endpoint receives the eventual completion event.
 
-Node.js itself was working correctly:
+A successful print confirmation transitions the attendee to:
 
-Node.js v24.19.0
+```text
+CHECKED_IN
+```
 
-Apollo Server and GraphQL had already installed successfully.
+A failed print does not incorrectly mark the attendee as checked in.
 
-The failure occurred specifically when the native esbuild.exe executable was being launched.
+---
 
-### Decision
+# 9. Duplicate and Out-of-Order Event Protection
 
-The project was not modified to bypass Windows security controls.
+The pivot introduced an additional state-management problem.
 
-Because the purpose of the Day 1–2 assignment is to learn GraphQL, TypeScript and tsx were not considered essential to the initial GraphQL prototype.
+Webhook events may arrive later than the original scan and may not necessarily arrive in the order expected by the kiosk.
 
-### Resolution
+The implementation therefore checks the attendee's current state before applying a webhook.
 
-The prototype was simplified to plain JavaScript using Node.js, Apollo Server and GraphQL.
+Examples tested included:
 
-This allowed the unfamiliar GraphQL tool to be explored without spending the entire reconnaissance period troubleshooting an unrelated native build tool.
+### Already checked in
 
-### Learning
+A duplicate scan returned:
 
-Modern npm packages may contain native platform-specific executables.
+```text
+Attendee is already checked in.
+```
 
-A dependency installation can therefore fail even when Node.js and npm themselves are working correctly.
+No second print request was created.
 
-The blocker also demonstrated the importance of distinguishing:
+### Already pending
 
-the tool being assessed,
-development tooling,
-operating-system security,
-and native package dependencies.
+A second scan while a print was pending returned:
 
-# GraphQL Prototype Milestone
-### Date
+```text
+Badge printing is already pending.
+```
 
-21 August 2026
+### Late webhook
 
-### Objective
+A webhook arriving after an attendee had already been checked in returned:
 
-Build a minimal GraphQL prototype capable of exposing warehouse inventory information through a query endpoint.
+```text
+Attendee is already checked in. Webhook ignored.
+```
 
-Technology
-Node.js 24.19.0
-Apollo Server 5.5.1
-GraphQL 16.14.2
-JavaScript
-Prototype capabilities
+This prevented a late asynchronous event from corrupting the attendee's state.
 
-The prototype exposes:
+---
 
-products
+# 10. Test Evidence
 
-and:
+The final workflow was tested using multiple attendees.
 
-product(sku: ID!)
-Example query
-query {
-  products {
-    sku
-    name
-    quantity
-    inStock
-  }
-}
-Individual product query
-query {
-  product(sku: "SKU-001") {
-    sku
-    name
-    quantity
-    inStock
-  }
-}
-Result
+## Attendee 1 — Alice Kamau
 
-The GraphQL queries successfully executed through Apollo Server.
+Initial check-in:
 
-This established the core GraphQL query layer required by the inventory synchronization scenario.
+```text
+PENDING
+```
 
-Current Status
-Python installation       COMPLETE
-Node.js installation      COMPLETE
-npm installation          COMPLETE
-GraphQL dependencies      COMPLETE
-Apollo Server              COMPLETE
-GraphQL prototype          WORKING
-TypeScript tooling         BLOCKED
-Smart App Control          REMAINS ENABLED
-Reflection
+Failed print webhook:
 
-The most important learning from the reconnaissance phase was that technical troubleshooting is often a process of narrowing down the actual cause rather than repeatedly applying generic fixes.
+```text
+FAILED
+```
 
-Several initial hypotheses were tested and rejected.
+The attendee was not incorrectly marked as checked in.
 
-The final approach avoided disabling Windows security features unnecessarily and allowed the GraphQL prototype to be completed using the tools that were actually required for the learning objective.
+Successful print webhook:
 
-The prototype now provides a foundation for the Day 3 warehouse polling architecture and the later Day 4 webhook pivot.
+```text
+PRINTED
+```
+
+Final state:
+
+```text
+CHECKED_IN
+```
+
+## Attendee 2 — Brian Otieno
+
+Initial check-in returned:
+
+```text
+Check-in accepted. Badge printing is pending.
+```
+
+Final state initially remained:
+
+```text
+PENDING
+```
+
+This demonstrated that the GraphQL mutation does not falsely report immediate success.
+
+## Attendee 3 — Carol Wanjiku
+
+Initial check-in:
+
+```text
+PENDING
+```
+
+Successful webhook:
+
+```text
+PRINTED
+```
+
+Final state:
+
+```text
+CHECKED_IN
+```
+
+Duplicate scan:
+
+```text
+Attendee is already checked in.
+```
+
+Late webhook:
+
+```text
+Attendee is already checked in. Webhook ignored.
+```
+
+These tests demonstrated the core requirements of the pivot.
+
+---
+
+# 11. Final Git History
+
+The feature branch contains a visible progression:
+
+```text
+6543af1 refactor: restore TypeScript architecture
+c3a3544 refactor: rename inventory resolver to check-in resolver
+c886a96 feat: implement asynchronous badge printing workflow
+```
+
+The earlier warehouse development remains visible on the preceding branch:
+
+```text
+829d969 feat: add inventory cache
+9fbe157 feat: add inventory polling
+5492dd3 feat: expose inventory cache status
+```
+
+This history documents the evolution from the original warehouse service through the environmental blockers and finally into the Meridian Pivot.
+
+---
+
+# 12. Key Engineering Lessons
+
+### 1. A blocker does not have to stop the entire project
+
+When the intended TypeScript toolchain became unreliable, JavaScript provided a temporary route forward.
+
+### 2. A workaround should remain reversible
+
+The JavaScript implementation was deliberately treated as temporary.
+
+Once the environment stabilized, the project returned to TypeScript.
+
+### 3. Preserve useful architecture during a pivot
+
+The existing separation between data, schema, resolvers and services made it possible to adapt the project rather than rebuild it from scratch.
+
+### 4. Asynchronous systems require explicit state management
+
+The distinction between:
+
+```text
+PENDING
+CHECKED_IN
+```
+
+became essential once the printer no longer returned an immediate result.
+
+### 5. Duplicate protection must happen at the state-management layer
+
+A UI-level duplicate check is not sufficient.
+
+The service must reject duplicate requests based on the attendee's current state.
+
+### 6. Webhooks must be treated as asynchronous events
+
+A webhook can arrive late or after the state has already changed.
+
+The application therefore validates the current state before applying the event.
+
+---
+
+# Final Status
+
+The major environment blockers were overcome.
+
+The project was temporarily adapted to JavaScript to maintain development progress, then successfully restored to TypeScript.
+
+The original warehouse architecture was preserved and extended into the Meridian Pivot.
+
+The final implementation successfully demonstrates:
+
+* asynchronous check-in
+* print queueing
+* webhook confirmation
+* pending state
+* successful completion state
+* failed print handling
+* duplicate-scan protection
+* late webhook protection
+
+The implementation was compiled successfully, tested locally, committed to Git, and pushed to the `feature/meridian-pivot` branch.
+
+
