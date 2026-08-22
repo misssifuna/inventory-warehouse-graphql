@@ -1,20 +1,21 @@
-import {
-  getCachedInventory,
-  getCachedProduct,
-  getCacheLastUpdated,
-} from "../services/inventoryCache";
+import { getAttendee, getAttendees } from "../data/attendees";
+import { requestCheckIn } from "../services/checkInService";
 
 const resolvers = {
   Query: {
-    products: () => getCachedInventory(),
+    attendee: (_: unknown, args: { id: string }) => {
+      return getAttendee(args.id);
+    },
 
-    product: (_: unknown, args: { sku: string }) =>
-      getCachedProduct(args.sku),
+    attendees: () => {
+      return getAttendees();
+    },
+  },
 
-    inventoryStatus: () => ({
-      lastUpdatedAt: getCacheLastUpdated()?.toISOString() ?? null,
-      productCount: getCachedInventory().length,
-    }),
+  Mutation: {
+    checkIn: (_: unknown, args: { attendeeId: string }) => {
+      return requestCheckIn(args.attendeeId);
+    },
   },
 };
 
