@@ -1,4 +1,4 @@
-export const typeDefs = `#graphql
+const typeDefs = `#graphql
   type Product {
     sku: ID!
     name: String!
@@ -6,8 +6,17 @@ export const typeDefs = `#graphql
     inStock: Boolean!
   }
 
+  type InventoryStatus {
+    lastUpdatedAt: String
+    productCount: Int!
+  }
+
   type Query {
     products: [Product!]!
     product(sku: ID!): Product
+    inventoryStatus: InventoryStatus!
   }
 `;
+
+export { typeDefs };
+

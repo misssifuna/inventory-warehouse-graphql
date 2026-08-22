@@ -3,7 +3,10 @@ import { startStandaloneServer } from "@apollo/server/standalone";
 
 import { typeDefs } from "./src/schema/typeDefs";
 import { resolvers } from "./src/resolvers/inventory";
-import { startInventoryPolling } from "./src/services/inventoryPoller";
+import {
+  startInventoryPolling,
+  stopInventoryPolling,
+} from "./src/services/inventoryPoller";
 
 const server = new ApolloServer({
   typeDefs,
@@ -23,5 +26,17 @@ async function startServer() {
 startServer().catch((error) => {
   console.error("Failed to start GraphQL server:", error);
   process.exit(1);
+});
+
+process.on("SIGINT", () => {
+  console.log("\nShutting down...");
+  stopInventoryPolling();
+  process.exit(0);
+});
+
+process.on("SIGTERM", () => {
+  console.log("\nShutting down...");
+  stopInventoryPolling();
+  process.exit(0);
 });
 
